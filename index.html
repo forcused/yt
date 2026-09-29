@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ForcusedYT — Distraction-Free YouTube Viewer</title>
+<meta name="description" content="ForcusedYT is a distraction-free YouTube viewer for watching YouTube videos in a clean, focused player with Focus Mode and fullscreen support.">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<link rel="canonical" href="https://forcused.github.io/yt/">
+<meta name="theme-color" content="#07090e">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ForcusedYT">
+<meta property="og:title" content="ForcusedYT — Distraction-Free YouTube Viewer">
+<meta property="og:description" content="Watch YouTube videos in a clean, focused player with Focus Mode, fullscreen, loop, and shareable ForcusedYT links.">
+<meta property="og:url" content="https://forcused.github.io/yt/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="ForcusedYT — Distraction-Free YouTube Viewer">
+<meta name="twitter:description" content="A clean YouTube viewer built for focused watching, fullscreen playback, and shareable video links.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "ForcusedYT",
+  "url": "https://forcused.github.io/yt/",
+  "description": "A distraction-free YouTube viewer for focused video watching."
+}
+</script>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='28' fill='%236366f1'/><path d='M38 30l32 20-32 20z' fill='%23ffffff'/></svg>">
+<style>
+:root {
+  --bg: #07090e;
+  --card-bg: rgba(22, 26, 38, 0.65);
+  --card-border: rgba(255, 255, 255, 0.12);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --accent: #6366f1;
+  --accent-glow: rgba(99, 102, 241, 0.35);
+  --radius-lg: 24px;
+  --radius-md: 14px;
+  --blur: blur(20px) saturate(180%);
+  --transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.light {
+  --bg: #f1f5f9;
+  --card-bg: rgba(255, 255, 255, 0.7);
+  --card-border: rgba(255, 255, 255, 0.8);
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --accent-glow: rgba(99, 102, 241, 0.15);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: var(--transition);
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Ambient Glow */
+.glow-orb {
+  position: fixed;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-glow) 0%, rgba(0,0,0,0) 70%);
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(50px);
+}
+
+/* Lightweight motion system */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes softPulse {
+  0%, 100% { opacity: .55; }
+  50% { opacity: .8; }
+}
+@keyframes playerIn {
+  from { opacity: 0; transform: scale(.985); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+header { animation: fadeUp .42s ease-out both; }
+.search-card { animation: fadeUp .48s .04s ease-out both; }
+.player-container { animation: playerIn .5s .08s ease-out both; }
+.glow-orb { animation: softPulse 7s ease-in-out infinite; }
+
+.btn-glass, .btn-primary { will-change: transform; }
+.btn-glass:hover { transition-duration: .22s; }
+.btn-primary:hover { transition-duration: .22s; }
+.player-container:hover { box-shadow: 0 28px 58px -16px rgba(0,0,0,.56); }
+
+/* Keep focus/fullscreen transitions smooth but cheap */
+body.focus-mode main { animation: fadeUp .28s ease-out both; }
+.player-container:fullscreen { animation: playerIn .22s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+/* Header */
+header {
+  height: 70px;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1050px;
+  width: 100%;
+  margin: 0 auto;
+  z-index: 2;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.5px;
+  text-decoration: none;
+  color: var(--text-main);
+  transition: var(--transition);
+}
+
+.brand:hover {
+  transform: translateY(-1px);
+  opacity: 0.9;
+}
+
+/* Custom Unique Logo */
+.brand-icon {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 4px 18px var(--accent-glow);
+  position: relative;
+  overflow: hidden;
+}
+
+.brand-icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+}
+
+.brand-icon svg { width: 20px; height: 20px; fill: currentColor; z-index: 1; }
+
+.header-actions { display: flex; gap: 8px; }
+
+/* iOS Glass Button */
+.btn-glass {
+  background: var(--card-bg);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--card-border);
+  color: var(--text-main);
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition);
+}
+
+.btn-glass:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 20px -5px rgba(0,0,0,0.3);
+}
+
+.btn-glass:active { transform: scale(0.96); }
+.btn-glass svg { width: 15px; height: 15px; fill: currentColor; }
+
+/* SEO intro */
+.seo-intro {
+  padding: 8px 8px 22px;
+  animation: fadeUp .38s .02s ease-out both;
+}
+.seo-intro h1 {
+  font-size: clamp(26px, 4vw, 38px);
+  line-height: 1.1;
+  letter-spacing: -1.2px;
+  margin-bottom: 10px;
+}
+.seo-intro p {
+  max-width: 760px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+/* Main */
+main {
+  max-width: 1000px;
+  width: 92%;
+  margin: 10px auto 40px;
+  flex: 1;
+  z-index: 1;
+}
+
+/* Search Box */
+.search-card {
+  background: var(--card-bg);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 6px;
+  display: flex;
+  gap: 8px;
+  box-shadow: 0 20px 40px -15px rgba(0,0,0,0.4);
+  margin-bottom: 24px;
+  transition: var(--transition);
+}
+
+.search-card:focus-within {
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 10px 30px -5px var(--accent-glow);
+}
+
+.search-card input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0 18px;
+  color: var(--text-main);
+  font-size: 15px;
+}
+
+.search-card input::placeholder { color: var(--text-muted); }
+
+.btn-primary {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0 22px;
+  height: 46px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 15px var(--accent-glow);
+  transition: var(--transition);
+}
+
+.btn-primary:hover {
+  transform: scale(1.03);
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+
+/* Glass Player Frame */
+.player-container {
+  background: var(--card-bg);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  transition: var(--transition);
+}
+
+.player-aspect {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #000;
+}
+
+.player-aspect iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  gap: 12px;
+}
+
+.empty-state svg { width: 52px; height: 52px; opacity: 0.35; fill: currentColor; }
+
+
+/* Lightweight playback-speed control layered above YouTube's native controls. */
+.player-speed {
+  position:absolute;
+  left:50%;
+  bottom:54px;
+  transform:translate(-50%, 8px);
+  z-index:20;
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:opacity .18s ease, transform .18s ease, visibility .18s ease;
+}
+.player-aspect.speed-ui-visible .player-speed,
+.player-speed:hover,
+.player-speed.speed-open {
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+  transform:translate(-50%, 0);
+}
+.player-speed-toggle {
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(18,18,22,.88);
+  color:#fff;
+  border-radius:8px;
+  padding:7px 10px;
+  font:600 12px system-ui,sans-serif;
+  cursor:pointer;
+  box-shadow:0 5px 18px rgba(0,0,0,.35);
+  backdrop-filter:blur(8px);
+}
+.player-speed-toggle:hover { background:rgba(35,35,40,.94); }
+.player-speed-menu {
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 6px);
+  transform:translateX(-50%);
+  display:none;
+  gap:3px;
+  padding:4px;
+  border-radius:9px;
+  background:rgba(18,18,22,.94);
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
+  white-space:nowrap;
+}
+.player-speed.speed-open .player-speed-menu { display:flex; }
+.player-speed-option {
+  border:0;
+  background:transparent;
+  color:rgba(255,255,255,.76);
+  border-radius:6px;
+  padding:6px 8px;
+  font:600 11px system-ui,sans-serif;
+  cursor:pointer;
+}
+.player-speed-option:hover { color:#fff; background:rgba(255,255,255,.12); }
+.player-speed-option.active { color:#fff; background:var(--accent); }
+.player-container:fullscreen .player-speed { bottom:62px; }
+@media (max-width:600px) {
+  .player-speed { bottom:48px; }
+  .player-container:fullscreen .player-speed { bottom:56px; }
+}
+
+/* Action Toolbar */
+.toolbar {
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--card-border);
+  flex-wrap: wrap;
+}
+
+.btn-action {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--card-border);
+  color: var(--text-main);
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition);
+}
+
+.btn-action:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.btn-action.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.btn-action svg { width: 14px; height: 14px; fill: currentColor; }
+
+.select-action {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--card-border);
+  color: var(--text-main);
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: var(--transition);
+}
+
+.select-action option {
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.select-action:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.status-badge {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(30px);
+  background: var(--card-bg);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--card-border);
+  color: var(--text-main);
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-size: 13px;
+  box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: var(--transition);
+  z-index: 999;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+footer {
+  text-align: center;
+  padding: 24px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Browser fullscreen */
+.player-container:fullscreen {
+  border-radius: 0;
+  border: none;
+  width: 100vw;
+  height: 100vh;
+}
+
+.player-container:fullscreen .toolbar { display: none; }
+.player-container:fullscreen .player-aspect {
+  width: 100%;
+  height: 100vh;
+  aspect-ratio: auto;
+}
+
+/* Focus Mode: hide the site UI without using the browser Fullscreen API. */
+body.focus-mode {
+  background: #000;
+  overflow: hidden;
+}
+
+body.focus-mode .glow-orb,
+body.focus-mode header,
+body.focus-mode .seo-intro,
+body.focus-mode .search-card,
+body.focus-mode footer {
+  display: none !important;
+}
+
+body.focus-mode main {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.focus-mode .player-container {
+  width: min(100vw, 1400px);
+  max-width: 100%;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  box-shadow: none;
+}
+
+body.focus-mode .player-container .toolbar {
+  display: none !important;
+}
+
+/* Focus Mode exit control */
+.focus-exit-btn {
+  display: none;
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 9999;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 12px;
+  background: rgba(18,18,22,.72);
+  color: #fff;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.28);
+  cursor: pointer;
+  font: 600 12px/1 system-ui, sans-serif;
+  transition: opacity .18s ease, transform .18s ease, background .18s ease;
+}
+.focus-exit-btn svg { width: 15px; height: 15px; fill: currentColor; }
+.focus-exit-btn:hover { transform: translateY(-1px); background: rgba(35,35,42,.9); }
+.focus-exit-btn:active { transform: scale(.96); }
+body.focus-mode .focus-exit-btn { display: inline-flex; animation: focusExitIn .2s ease-out both; }
+@keyframes focusExitIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 600px) { .focus-exit-btn { top: 10px; right: 10px; padding: 9px 10px; } .focus-exit-btn { font-size: 0; } }
+@media (prefers-reduced-motion: reduce) { .focus-exit-btn { animation: none !important; } }
+
+/* Userscript dialog: the script is hidden until the user opens the option. */
+.userscript-modal { display:none; position:fixed; inset:0; z-index:10000; align-items:center; justify-content:center; padding:20px; }
+.userscript-modal.show { display:flex; animation:modalIn .18s ease-out both; }
+.userscript-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.66); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+.userscript-dialog { position:relative; width:min(900px,100%); max-height:min(88vh,760px); display:flex; flex-direction:column; gap:16px; padding:22px; border:1px solid rgba(255,255,255,.12); border-radius:18px; background:var(--card-bg, #151519); box-shadow:0 24px 80px rgba(0,0,0,.45); }
+.userscript-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.userscript-kicker { font-size:10px; font-weight:800; letter-spacing:.16em; opacity:.55; margin-bottom:5px; }
+.userscript-head h2 { margin:0 0 6px; font-size:20px; }
+.userscript-head p { margin:0; opacity:.65; font-size:12px; line-height:1.5; }
+.userscript-close { border:0; background:transparent; color:inherit; font-size:28px; line-height:1; cursor:pointer; opacity:.65; padding:2px 6px; }
+.userscript-close:hover { opacity:1; }
+.userscript-code { width:100%; min-height:380px; resize:vertical; box-sizing:border-box; padding:14px; border:1px solid rgba(255,255,255,.1); border-radius:12px; background:#0b0b0e; color:#d8d8df; font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; outline:none; }
+.userscript-actions { display:flex; justify-content:flex-end; gap:10px; }
+@keyframes modalIn { from { opacity:0; transform:scale(.985); } to { opacity:1; transform:scale(1); } }
+@media (max-width:600px) { .userscript-dialog { padding:16px; border-radius:15px; } .userscript-code { min-height:300px; font-size:11px; } .userscript-actions { flex-wrap:wrap; } }
+@media (prefers-reduced-motion:reduce) { .userscript-modal.show { animation:none; } }
+
+
+/* Keep the PC display awake while a video is playing. */
+body.playing-video {
+  /* JS Wake Lock API handles supported browsers; this class is a state marker. */
+}
+
+/* Light ISO-inspired visual polish */
+:root { --iso-line: rgba(148,163,184,.16); --iso-shadow: 0 18px 45px rgba(0,0,0,.20); }
+body::before { content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.32; background-image: linear-gradient(30deg, rgba(255,255,255,.018) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.018) 87.5%), linear-gradient(150deg, rgba(255,255,255,.018) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.018) 87.5%); background-size:34px 60px; background-position:0 0, 0 0; mask-image:linear-gradient(to bottom,black,transparent 78%); }
+header, main, footer { position:relative; z-index:1; }
+.brand-icon { box-shadow:0 6px 20px var(--accent-glow); transition:transform .25s ease, box-shadow .25s ease; }
+.brand:hover .brand-icon { transform:rotate(-2deg) scale(1.04); box-shadow:0 10px 28px var(--accent-glow); }
+.search-card { border-color:var(--iso-line); box-shadow:var(--iso-shadow); }
+.search-card:focus-within { transform:translateY(-1px); }
+.player-container { border-color:var(--iso-line); box-shadow:var(--iso-shadow); }
+.btn-glass, .btn-action { border-color:var(--iso-line); }
+.btn-action { transition:transform .2s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.btn-action:hover { box-shadow:0 7px 18px rgba(0,0,0,.16); }
+.btn-primary { transition:transform .2s ease, box-shadow .2s ease; }
+.btn-primary:active, .btn-action:active, .btn-glass:active { transform:scale(.97); }
+.status-badge { padding:6px 10px; border:1px solid var(--iso-line); border-radius:999px; background:rgba(255,255,255,.035); }
+@media (prefers-reduced-motion: reduce) { body::before { display:none; } }
+</style>
+</head>
+<body>
+
+<div class="glow-orb"></div>
+
+<header>
+  <a href="https://forcused.github.io/yt/" class="brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+    </div>
+    <span>ForcusedYT</span>
+  </a>
+  <div class="header-actions">
+    <button class="btn-glass" id="userscriptBtn" title="Get ForcusedYT Auto-Redirect Userscript">
+      <svg viewBox="0 0 24 24"><path d="M8 3h8v2h3v16H5V5h3V3zm2 2v3h4V5h-4zm-3 5v9h10v-9H7zm2 2h6v2H9v-2zm0 3h4v2H9v-2z"/></svg>
+      <span>Userscript</span>
+    </button>
+    <button class="btn-glass" id="themeBtn">
+      <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-5.4-5.4c0-1.81.89-3.42 2.26-4.4C12.92 3.04 12.46 3 12 3z"/></svg>
+      <span>Theme</span>
+    </button>
+  </div>
+</header>
+
+<main>
+  <div class="search-card">
+    <input id="urlInput" placeholder="Paste YouTube or ForcusedYT link here..." autocomplete="off">
+    <button class="btn-primary" id="loadBtn">Watch</button>
+  </div>
+
+  <section class="player-container" id="playerContainer">
+    <div class="player-aspect" id="playerAspect">
+      <div class="empty-state" id="emptyState">
+        <svg viewBox="0 0 24 24"><path d="M21.58 7.19a2.7 2.7 0 0 0-1.9-1.9C18 4.75 12 4.75 12 4.75s-6 0-7.68.54a2.7 2.7 0 0 0-1.9 1.9C1.88 8.87 1.88 12 1.88 12s0 3.13.54 4.81a2.7 2.7 0 0 0 1.9 1.9c1.68.54 7.68.54 7.68.54s6 0 7.68-.54a2.7 2.7 0 0 0 1.9-1.9c.54-1.68.54-4.81.54-4.81s0-3.13-.54-4.81zM9.75 15.02V8.98L15.5 12l-5.75 3.02z"/></svg>
+        <span>Enter a YouTube link to stream</span>
+      </div>
+      <div class="player-speed" id="playerSpeed" aria-label="Playback speed">
+        <button class="player-speed-toggle" id="playerSpeedToggle" type="button" aria-expanded="false">1x</button>
+        <div class="player-speed-menu" id="playerSpeedMenu" role="menu">
+          <button class="player-speed-option active" type="button" data-speed="1">1x</button>
+          <button class="player-speed-option" type="button" data-speed="1.25">1.25x</button>
+          <button class="player-speed-option" type="button" data-speed="1.5">1.5x</button>
+          <button class="player-speed-option" type="button" data-speed="1.75">1.75x</button>
+          <button class="player-speed-option" type="button" data-speed="2">2x</button>
+        </div>
+      </div>
+      <iframe id="videoIframe" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="display:none;"></iframe>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn-action" id="loopBtn">
+        <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+        Loop
+      </button>
+      <button class="btn-action" id="openBtn">
+        <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+        YouTube
+      </button>
+      <button class="btn-action" id="copyCleanBtn">
+        <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+        Copy Link
+      </button>
+      <button class="btn-action" id="copyTimeBtn">
+        <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        Copy Link + Time
+      </button>
+      <button class="btn-action" id="focusBtn" title="Focus Mode (F)">
+        <svg viewBox="0 0 24 24"><path d="M7 3H3v4h2V5h2V3zm12 0h-4v2h2v2h2V3zM5 17H3v4h4v-2H5v-2zm14 0h-2v2h-2v2h4v-4zM8 8h8v8H8z"/></svg>
+        Focus Mode
+      </button>
+      <button class="btn-action" id="fullscreenBtn" title="Fullscreen">
+        <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+        Fullscreen
+      </button>
+
+      <span class="status-badge" id="statusBadge">Ready</span>
+    </div>
+  </section>
+</main>
+
+<button id="focusExitBtn" class="focus-exit-btn" type="button" title="Exit Focus Mode">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h5v2H7v3H5V5zm14 0v5h-2V7h-3V5h5zM5 14h2v3h3v2H5v-5zm14 0v5h-5v-2h3v-3h2z"/></svg>
+  Exit Focus
+</button>
+
+<div class="userscript-modal" id="userscriptModal" aria-hidden="true">
+  <div class="userscript-backdrop" id="userscriptBackdrop"></div>
+  <section class="userscript-dialog" role="dialog" aria-modal="true" aria-labelledby="userscriptTitle">
+    <div class="userscript-head">
+      <div>
+        <div class="userscript-kicker">FORCUSEDYT</div>
+        <h2 id="userscriptTitle">YouTube Auto-Redirect</h2>
+        <p>Copy this Tampermonkey userscript to automatically send YouTube video links to ForcusedYT.</p>
+      </div>
+      <button class="userscript-close" id="userscriptClose" type="button" aria-label="Close">×</button>
+    </div>
+    <textarea id="userscriptCode" class="userscript-code" readonly spellcheck="false"></textarea>
+    <div class="userscript-actions">
+      <button class="btn-action" id="userscriptCopy" type="button">
+        <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14h13c1.1 0 2-.9 2-2V7c0-1.1.9-2 2-2zm0 16H8V7h11v14z"/></svg>
+        Copy Userscript
+      </button>
+      <button class="btn-action" id="userscriptDone" type="button">Done</button>
+    </div>
+  </section>
+</div>
+
+<footer>ForcusedYT — Distraction-Free Experience</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+let displayWakeLock = null;
+async function requestDisplayWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    if (!displayWakeLock) displayWakeLock = await navigator.wakeLock.request('screen');
+    displayWakeLock.addEventListener('release', () => { displayWakeLock = null; });
+  } catch (_) {}
+}
+async function releaseDisplayWakeLock() {
+  if (displayWakeLock) { try { await displayWakeLock.release(); } catch (_) {} displayWakeLock = null; }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && currentVideoId) requestDisplayWakeLock();
+});
+
+
+let isLooping = false;
+let currentVideoId = '';
+let currentTimestamp = null;
+
+// ForcusedYT deep-link support.
+// Canonical share/reload URL: https://forcused.github.io/yt/?v=VIDEO_ID
+// Also accepts pasted site links such as:
+// https://forcused.github.io/yt/VIDEO_ID
+function getDeepLinkData() {
+  const params = new URLSearchParams(location.search);
+  let id = params.get('v') || '';
+
+  // Also understand /yt/VIDEO_ID if reached through a GitHub Pages fallback.
+  if (!id) {
+    const match = location.pathname.match(/^\/yt\/([A-Za-z0-9_-]{11})\/?$/);
+    if (match) id = match[1];
+  }
+
+  if (!/^[A-Za-z0-9_-]{11}$/.test(id)) return null;
+
+  const start = parseTimestamp(params.get('t') || params.get('start'));
+  return { id, start };
+}
+
+function updateCanonicalUrl(id, start = null, replace = true) {
+  // Always use index.html's query URL so refreshing on GitHub Pages never 404s.
+  const url = new URL('/yt/', location.origin);
+  url.searchParams.set('v', id);
+  if (start) url.searchParams.set('t', start);
+  (replace ? history.replaceState : history.pushState).call(history, {}, '', url.href);
+}
+
+
+
+function parseTimestamp(t) {
+  if (!t) return null;
+  if (/^\d+$/.test(t)) return parseInt(t, 10);
+  let seconds = 0;
+  const h = t.match(/(\d+)h/); const m = t.match(/(\d+)m/); const s = t.match(/(\d+)s/);
+  if (h) seconds += parseInt(h[1], 10) * 3600;
+  if (m) seconds += parseInt(m[1], 10) * 60;
+  if (s) seconds += parseInt(s[1], 10);
+  return seconds > 0 ? seconds : null;
+}
+
+function extractYouTubeData(value) {
+  value = value.trim();
+  if (!value) return null;
+  if (/^[a-zA-Z0-9_-]{11}$/.test(value)) return { id: value, start: null };
+
+  let id = null; let start = null;
+  try {
+    const u = new URL(value);
+    const host = u.hostname.replace(/^www\./, '').toLowerCase();
+    const tParam = u.searchParams.get('t') || u.searchParams.get('start');
+    start = parseTimestamp(tParam);
+
+    if (host === 'youtu.be') {
+      id = u.pathname.split('/').filter(Boolean)[0];
+    } else if (host === 'youtube.com' || host === 'm.youtube.com') {
+      if (u.pathname === '/watch') { id = u.searchParams.get('v'); }
+      else {
+        const paths = u.pathname.split('/');
+        if (['/shorts/', '/embed/', '/live/', '/v/'].some(p => u.pathname.startsWith(p))) { id = paths[2]; }
+      }
+    } else if (host === 'forcused.github.io') {
+      // Accept links pasted from this site:
+      // https://forcused.github.io/yt/VIDEO_ID
+      // https://forcused.github.io/yt/?v=VIDEO_ID
+      if (u.pathname === '/yt/' || u.pathname === '/yt') {
+        id = u.searchParams.get('v');
+      } else {
+        const match = u.pathname.match(/^\/yt\/([A-Za-z0-9_-]{11})\/?$/);
+        if (match) id = match[1];
+      }
+    }
+  } catch(e) {}
+  return id ? { id, start } : null;
+}
+
+function showToast(msg) {
+  $('toast').textContent = msg;
+  $('toast').classList.add('show');
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => $('toast').classList.remove('show'), 2200);
+}
+
+$('loadBtn').addEventListener('click', () => loadVideo($('urlInput').value));
+$('urlInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadVideo($('urlInput').value); });
+
+function loadVideo(value) {
+  const data = extractYouTubeData(value);
+  if (!data || !data.id) {
+    showToast('Paste a YouTube or ForcusedYT link');
+    return;
+  }
+
+  currentVideoId = data.id;
+  currentTimestamp = data.start;
+  document.body.classList.add('playing-video');
+  requestDisplayWakeLock();
+
+  // Show the shareable ForcusedYT link in the input after Watch.
+  const cleanUrl = new URL('/yt/', location.origin);
+  cleanUrl.searchParams.set('v', data.id);
+  if (data.start) cleanUrl.searchParams.set('t', data.start);
+  $('urlInput').value = cleanUrl.href;
+  updateCanonicalUrl(data.id, data.start, true);
+  $('statusBadge').textContent = 'Playing';
+  $('emptyState').style.display = 'none';
+
+  const iframe = $('videoIframe');
+
+  // Use the normal YouTube embed origin for compatibility with YouTube
+  // quality extensions such as ResLock. youtube-nocookie.com is a different
+  // origin and may not be matched by an extension that targets YouTube.
+  const params = new URLSearchParams();
+  params.set('autoplay', '1');
+  params.set('rel', '0');
+  params.set('playsinline', '1');
+params.set('controls', '1');
+  params.set('modestbranding', '1');
+  params.set('enablejsapi', '1');
+  params.set('origin', window.location.origin);
+
+  if (isLooping) {
+    params.set('loop', '1');
+    params.set('playlist', data.id);
+  }
+  if (data.start) params.set('start', String(data.start));
+
+  iframe.src = `https://www.youtube.com/embed/${encodeURIComponent(data.id)}?${params.toString()}`;
+  iframe.style.display = 'block';
+
+}
+
+
+// Playback speed overlay: it follows the same mouse-activity rhythm as
+// YouTube's native controls, without replacing those controls.
+let playbackSpeed = 1;
+let speedUiTimer = null;
+
+function sendYouTubeCommand(func, args = []) {
+  const iframe = $('videoIframe');
+  if (!iframe || !iframe.contentWindow) return;
+  iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args }), 'https://www.youtube.com');
+}
+
+function setPlaybackSpeed(speed) {
+  playbackSpeed = Number(speed);
+  $('playerSpeedToggle').textContent = playbackSpeed + 'x';
+  document.querySelectorAll('.player-speed-option').forEach(btn => {
+    btn.classList.toggle('active', Number(btn.dataset.speed) === playbackSpeed);
+  });
+  sendYouTubeCommand('setPlaybackRate', [playbackSpeed]);
+  showToast(`Playback speed: ${playbackSpeed}x`);
+  $('playerSpeed').classList.remove('speed-open');
+  $('playerSpeedToggle').setAttribute('aria-expanded', 'false');
+  showSpeedUi();
+}
+
+function showSpeedUi() {
+  const aspect = $('playerAspect');
+  if (!aspect || $('videoIframe').style.display === 'none') return;
+  aspect.classList.add('speed-ui-visible');
+  clearTimeout(speedUiTimer);
+  speedUiTimer = setTimeout(() => {
+    if (!$('playerSpeed').matches(':hover')) {
+      aspect.classList.remove('speed-ui-visible');
+      $('playerSpeed').classList.remove('speed-open');
+      $('playerSpeedToggle').setAttribute('aria-expanded', 'false');
+    }
+  }, 5000);
+}
+
+$('playerAspect').addEventListener('mousemove', showSpeedUi);
+$('playerAspect').addEventListener('mouseenter', showSpeedUi);
+document.addEventListener('mousemove', e => {
+  const aspect = $('playerAspect');
+  if (!aspect || $('videoIframe').style.display === 'none') return;
+  const rect = aspect.getBoundingClientRect();
+  if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+    showSpeedUi();
+  }
+});
+$('playerAspect').addEventListener('mouseleave', () => {
+  clearTimeout(speedUiTimer);
+  $('playerSpeed').classList.remove('speed-open');
+  $('playerSpeedToggle').setAttribute('aria-expanded', 'false');
+  $('playerAspect').classList.remove('speed-ui-visible');
+});
+
+$('playerSpeedToggle').addEventListener('click', e => {
+  e.stopPropagation();
+  showSpeedUi();
+  const open = $('playerSpeed').classList.toggle('speed-open');
+  $('playerSpeedToggle').setAttribute('aria-expanded', String(open));
+});
+
+document.querySelectorAll('.player-speed-option').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    setPlaybackSpeed(btn.dataset.speed);
+  });
+});
+
+const FORCUSED_USERSCRIPT = "// ==UserScript==\n// @name           ForcusedYT Auto-Redirect\n// @namespace      forcused.github.io\n// @description    Auto-redirect YouTube videos to ForcusedYT.\n// @match          http://*/*\n// @match          https://*/*\n// @noframes\n// @grant          GM_setValue\n// @grant          GM_getValue\n// @grant          GM_registerMenuCommand\n// @version        1.0\n// @icon           https://www.youtube.com/s/desktop/fe1d1f42/img/favicon_32x32.png\n// ==/UserScript==\n\n(function () {\n  'use strict';\n\n  const FORCUSED_HOST = 'forcused.github.io';\n  const FORCUSED_PATH = '/yt/';\n\n  // Don't redirect our own site.\n  if (\n    location.hostname === FORCUSED_HOST &&\n    location.pathname.startsWith(FORCUSED_PATH)\n  ) {\n    return;\n  }\n\n  let redirectSearches = GM_getValue('redirectSearches', false);\n\n  GM_registerMenuCommand(\n    'Toggle YouTube search redirects',\n    function () {\n      redirectSearches = !redirectSearches;\n      GM_setValue('redirectSearches', redirectSearches);\n    }\n  );\n\n  // Extract a YouTube video ID.\n  function getYouTubeId(raw) {\n    let u;\n\n    try {\n      u = new URL(raw, location.href);\n    } catch (_) {\n      return null;\n    }\n\n    const host = u.hostname.replace(/^www\\./, '');\n\n    if (\n      ![\n        'youtube.com',\n        'm.youtube.com',\n        'music.youtube.com',\n        'youtu.be'\n      ].includes(host)\n    ) {\n      return null;\n    }\n\n    let id = '';\n\n    // youtu.be/VIDEO_ID\n    if (host === 'youtu.be') {\n      id = u.pathname.split('/')[1] || '';\n    }\n\n    // youtube.com/watch?v=VIDEO_ID\n    if (!id) {\n      id = u.searchParams.get('v') || '';\n    }\n\n    // youtube.com/shorts/VIDEO_ID\n    // youtube.com/live/VIDEO_ID\n    // youtube.com/embed/VIDEO_ID\n    if (!id) {\n      const match = u.pathname.match(\n        /^\\/(shorts|live|embed)\\/([A-Za-z0-9_-]{11})/\n      );\n\n      if (match) {\n        id = match[2];\n      }\n    }\n\n    return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;\n  }\n\n  // Build your reliable GitHub Pages URL.\n  function destination(raw) {\n    const id = getYouTubeId(raw);\n\n    if (!id) {\n      return null;\n    }\n\n    return (\n      'https://' +\n      FORCUSED_HOST +\n      FORCUSED_PATH +\n      '?v=' +\n      encodeURIComponent(id)\n    );\n  }\n\n  // Redirect the current page if it is a YouTube video.\n  function redirect() {\n    const target = destination(location.href);\n\n    if (target) {\n      location.replace(target);\n      return;\n    }\n\n    // Optional YouTube search redirect.\n    if (\n      redirectSearches &&\n      /^(www\\.|m\\.)?youtube\\.com$/.test(location.hostname) &&\n      location.pathname === '/results' &&\n      new URL(location.href).searchParams.has('search_query')\n    ) {\n      const query = new URL(location.href)\n        .searchParams\n        .get('search_query');\n\n      if (query) {\n        // Search stays on YouTube because ForcusedYT is a video player.\n        // This section intentionally does not redirect the search.\n      }\n    }\n  }\n\n  // Convert YouTube links already visible on a page.\n  function convertLinks() {\n    document.querySelectorAll('a[href]').forEach(function (link) {\n      const target = destination(link.href);\n\n      if (target) {\n        link.href = target;\n      }\n    });\n  }\n\n  // Initial run.\n  redirect();\n  convertLinks();\n\n  // YouTube SPA navigation.\n  document.addEventListener(\n    'yt-navigate-finish',\n    function () {\n      redirect();\n      convertLinks();\n    }\n  );\n\n  // Browser back/forward.\n  window.addEventListener('popstate', function () {\n    redirect();\n    convertLinks();\n  });\n\n  // YouTube dynamically creates links as you scroll.\n  let queued = false;\n  let current = location.href;\n\n  new MutationObserver(function () {\n    if (queued) return;\n\n    queued = true;\n\n    setTimeout(function () {\n      queued = false;\n\n      if (current !== location.href) {\n        current = location.href;\n        redirect();\n      }\n\n      convertLinks();\n    }, 200);\n  }).observe(document.documentElement, {\n    childList: true,\n    subtree: true\n  });\n\n})();";
+$('userscriptCode').value = FORCUSED_USERSCRIPT;
+$('userscriptBtn').onclick = () => {
+  $('userscriptModal').classList.add('show');
+  $('userscriptModal').setAttribute('aria-hidden', 'false');
+};
+function closeUserscript() {
+  $('userscriptModal').classList.remove('show');
+  $('userscriptModal').setAttribute('aria-hidden', 'true');
+}
+$('userscriptClose').onclick = closeUserscript;
+$('userscriptDone').onclick = closeUserscript;
+$('userscriptBackdrop').onclick = closeUserscript;
+$('userscriptCopy').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(FORCUSED_USERSCRIPT);
+    showToast('Userscript copied');
+  } catch (e) {
+    $('userscriptCode').focus();
+    $('userscriptCode').select();
+    showToast('Select the code and copy');
+  }
+};
+
+// Load /yt/?v=VIDEO_ID automatically on first visit and after reload.
+const deepLink = getDeepLinkData();
+if (deepLink) {
+  loadVideo(deepLink.id + (deepLink.start ? '?t=' + deepLink.start : ''));
+}
+
+// Browser back/forward support.
+window.addEventListener('popstate', () => {
+  const data = getDeepLinkData();
+  if (data) {
+    loadVideo(data.id + (data.start ? '?t=' + data.start : ''));
+  }
+});
+
+function toggleFullScreen() {
+  const container = $('playerContainer');
+  if (!document.fullscreenElement) {
+    const request = container.requestFullscreen || container.webkitRequestFullscreen;
+    if (request) {
+      Promise.resolve(request.call(container)).catch(() => showToast('Fullscreen unavailable'));
+    } else {
+      showToast('Fullscreen unavailable');
+    }
+  } else {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) Promise.resolve(exit.call(document)).catch(() => {});
+  }
+}
+
+function updateFullscreenButton() {
+  const active = !!document.fullscreenElement;
+  $('fullscreenBtn').classList.toggle('active', active);
+  $('fullscreenBtn').lastChild.textContent = active ? ' Exit Fullscreen' : ' Fullscreen';
+}
+
+function toggleFocusMode() {
+  const active = document.body.classList.toggle('focus-mode');
+  $('focusBtn').classList.toggle('active', active);
+  $('focusBtn').lastChild.textContent = active ? ' Exit Focus' : ' Focus Mode';
+  showToast(active ? 'Focus Mode On — press F or Esc to exit' : 'Focus Mode Off');
+}
+
+$('focusBtn').onclick = toggleFocusMode;
+$('focusExitBtn').onclick = () => { if (document.body.classList.contains('focus-mode')) toggleFocusMode(); };
+$('fullscreenBtn').onclick = toggleFullScreen;
+document.addEventListener('fullscreenchange', updateFullscreenButton);
+window.addEventListener('keydown', e => {
+  if (e.key.toLowerCase() === 'f' && !['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)) {
+    e.preventDefault();
+    toggleFocusMode();
+  }
+  if (e.key === '`') {
+    e.preventDefault();
+    toggleFullScreen();
+  }
+  if (e.key === 'Escape' && $('userscriptModal').classList.contains('show')) {
+    closeUserscript();
+    return;
+  }
+  if (e.key === 'Escape' && document.body.classList.contains('focus-mode') && !document.fullscreenElement) {
+    toggleFocusMode();
+  }
+});
+</script>
+<script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>
